@@ -5,7 +5,6 @@
 #include <sys/types.h>
 #include <string>
 
-
 namespace monsoon {
 pid_t GetThreadId();
 

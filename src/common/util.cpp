@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include "util.hpp"
+#include "config.hpp"
 
 // 增强版的printf函数，打印当前时间和参数信息
 void DPrintf(const char* format, ...){
