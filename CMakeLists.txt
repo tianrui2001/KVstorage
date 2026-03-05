@@ -13,6 +13,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 include_directories(${PROJECT_SOURCE_DIR}/src/common/include)
 include_directories(${PROJECT_SOURCE_DIR}/src/rpc/include)
 include_directories(${PROJECT_SOURCE_DIR}/example)
+include_directories(${PROJECT_SOURCE_DIR}/src/fiber/include)
 
 
 # 设置项目库文件搜索路径 -L

@@ -45,6 +45,7 @@ Fiber::Fiber(){
     state_ = RUNNING;
     setCurFiber(this); // 设置当前协程为 this
     CondPanic(getcontext(&ctx_) == 0, "getcontext error"); // 获取当前上下文，保存到 ctx_ 中
+    std::cout << "[fiber] create fiber , id = " << id_ << std::endl;
 }
 
 Fiber::~Fiber(){
@@ -96,13 +97,15 @@ void Fiber::resume(){
 void Fiber::yield(){
     CondPanic(state_ == RUNNING || state_ == TERM, "Fiber is not running"); // 这里为什么会有 TERM？因为协程执行完毕后会自动 yield
     setCurFiber(cur_thread_main_fiber.get());   // 标记当前运行的变回了主协程
-    state_ = READY;
+    if(state_ != TERM) {
+        state_ = READY; // 只有不是 TERM 的时候才切回 READY 状态
+    }
 
     if(isRunInScheduler_) {
-        CondPanic(swapcontext(&Scheduler::getMainFiber()->ctx_, &ctx_) == 0,
+        CondPanic(swapcontext(&ctx_, &Scheduler::getMainFiber()->ctx_) == 0,
                 "isRunInScheduler_ = true, swapcontext error");
     } else {
-        CondPanic(swapcontext(&cur_thread_main_fiber->ctx_, &ctx_) == 0,
+        CondPanic(swapcontext(&ctx_, &cur_thread_main_fiber->ctx_) == 0,
                 "isRunInScheduler_ = false, swapcontext error");
     }
 }

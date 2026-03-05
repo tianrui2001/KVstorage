@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package raftRpcProctoc; // 所在命名空间
+
+option cc_generic_services = true; // 开启 stub 服务
+
+// 日志实体
+message LogEntry {
+    bytes Command = 1; // 日志命令
+    int32 LogTerm = 2; // 日志任期
+    int32 LogIndex = 3; // 日志索引
+}
+
+
+
+// AppendEntriesArgs 由leader复制log条目，也可以当做是心跳连接，注释中的rf为leader节点
+message AppendEntriesArgs {
+    int32 Term = 1;
+    int32 LeaderId = 2;
+    int32 PrevLogIndex = 3;     // 追加日志前一个日志条目的索引，leader会根据这个索引来判断follower的日志是否和自己一致
+    int32 PrevLogTerm = 4;
+    repeated LogEntry Entries = 5;
+    int32 LeaderCommit = 6;     // leader的commitIndex，follower会根据这个值来更新自己的commitIndex
+}
+
+// AppendEntriesReply 论文中没有提及返回要设置哪些状态
+message AppendEntriesReply {
+    int32 Term = 1;
+    bool Success = 2;           // 追加日志是否成功
+    int32 UpdateNextIndex = 3; // 如果复制失败，返回leader需要更新的nextIndex
+    int32 AppState = 4;        // 追加日志的状态
+}
+
+message RequestVoteArgs  {
+	int32 Term         =1;
+	int32 CandidateId  =2;
+	int32 LastLogIndex =3;
+	int32 LastLogTerm  =4;
+}
+
+// RequestVoteReply
+// 示例 RequestVote RPC 的回复结构。字段名必须以大写字母开头！
+message RequestVoteReply {
+    int32 Term = 1;
+    bool VoteGranted = 2;
+    int32 VoteState = 3;    // 投票状态
+}
+
+message InstallSnapshotRequest {
+    int32 LeaderId = 1;
+    int32 Term = 2;
+    int32 LastSnapShotIncludeIndex = 4; // 快照中最后一个日志条目的索引
+    int32 LastSnapShotIncludeTerm = 5;  // 快照中最后一个日志条目的任期
+    bytes Data = 3;                     //快照信息，当然是用bytes来传递
+}
+
+// InstallSnapshotResponse 只用返回Term，因为对于快照只要Term是符合的就是无条件接受的
+message InstallSnapshotResponse {
+    int32 Term = 1;
+}
+
+
+//只有raft节点之间才会涉及rpc通信
+service raftRpc {
+    rpc AppendEntries(AppendEntriesArgs) returns(AppendEntriesReply);
+    rpc InstallSnapshot(InstallSnapshotRequest) returns(InstallSnapshotResponse);
+    rpc RequestVote(RequestVoteArgs) returns(RequestVoteReply);
+}

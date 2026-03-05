@@ -88,7 +88,7 @@ TimerManager::TimerManager() { previousTime_ = monsoon::GetElapsedMS(); }
 
 TimerManager::~TimerManager() {}
 
-TimerManager::TimerPtr TimerManager::addTimer(uint64_t ms, funcCallBack cb, bool is_repeat = false){
+TimerManager::TimerPtr TimerManager::addTimer(uint64_t ms, funcCallBack cb, bool is_repeat){
     TimerPtr timer(new Timer(ms, is_repeat, cb, this));
     RWMutex::WriteLock lock(mutex_);
     addTimer(timer, lock);

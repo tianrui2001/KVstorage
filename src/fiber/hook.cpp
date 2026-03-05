@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string>
 #include <stdarg.h>
+#include <sys/ioctl.h>
 
 #include "hook.hpp"
 #include "fd_manager.hpp"

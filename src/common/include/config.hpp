@@ -13,5 +13,5 @@ const int ConsensusTimeout = 500 * TimeUnit; // 共识超时时间(ms)
 
 // 协程相关的配置
 
-const int FIBER_THREAD_NUM = 4; // 协程线程数
+const int FIBER_THREAD_NUM = 1; // 协程线程数
 const bool FIBER_USE_CALLER_THREAD = false; // 是否使用caller线程作为协程线程

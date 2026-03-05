@@ -2,11 +2,10 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <ioctl.h>
 
 namespace monsoon {
 
-void setHookEnable(const bool flage) {}
+void setHookEnable(const bool flage);
 // 当前线程是否hook:在具体的 Hook 函数内部，会先检查这个开关。
 // 如果没开，就直接调用原始的系统函数，不进行协程调度。
 bool isHookEnable();

@@ -173,4 +173,9 @@ private:
 };
 
 
+// KVServer 回复的错误类型
+const std::string OK = "OK";
+const std::string ErrNoKey = "ErrNoKey";
+const std::string ErrWrongLeader = "ErrWrongLeader";
+
 // 后面还有一些，待实现...

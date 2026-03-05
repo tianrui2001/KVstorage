@@ -83,7 +83,7 @@ void Scheduler::run() {
     }
 
     // 创建idle协程：当任务队列为空时，线程不能死循环空转（占满 CPU），需要切到 idle 协程去休眠
-    Fiber::FiberPtr idle_fiber(new Fiber(std::bind(&Scheduler::idle, this), 0, false));
+    Fiber::FiberPtr idle_fiber(new Fiber(std::bind(&Scheduler::idle, this)));     // 待定
 
     // 5. 准备一个复用的协程对象，用于执行回调函数任务
     Fiber::FiberPtr cb_fiber;
@@ -161,7 +161,7 @@ void Scheduler::run() {
 }
 
 void Scheduler::idle() {
-    while(!isStopped_) {
+    while(!stopping()) {
         Fiber::getThis()->yield(); // 让出执行权，回到调度器
     }
 }
@@ -191,11 +191,19 @@ bool Scheduler::stopping() {
 // 使用caller线程，则调度线程依赖stop()来执行caller线程的调度协程
 // 不使用caller线程，只用caller线程去调度，则调度器真正开始执行的位置是stop()
 void Scheduler::stop(){
+    std::cout << LOG_HEAD << "stop" << std::endl;
     if(stopping()) {
         return; // 如果已经停止了，就不再执行
     }
 
     isStopped_ = true;
+    // 检查：只有 Caller 线程（发起 start 的那个线程）才有资格调用 stop
+    if (isUserCaller_) {
+        CondPanic(getThis() == this, "cur thread is not caller thread");
+    } else {
+        CondPanic(getThis() != this, "cur thread is caller thread");
+    }
+
     for(size_t i = 0; i < threadCnt_; i++){
         trickle(); // 唤醒所有 idle 协程
     }

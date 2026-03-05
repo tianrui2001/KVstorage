@@ -7,7 +7,7 @@
 #include <atomic>
 #include <mutex>
 
-#include "monsoon.hpp"
+#include "utils.hpp"
 #include "fiber.hpp"
 #include "thread.hpp"
 #include "mutex.hpp"
@@ -57,7 +57,7 @@ public:
     Scheduler(size_t threadCnt = 1, bool useCaller = true, const std::string& name = "Scheduler");
     virtual ~Scheduler();
 
-    const std::string& getName() const { return name_; }
+    const std::string& getName() const;
 
     // 获取当前线程的调度器协程
     static Fiber* getMainFiber();
@@ -79,7 +79,7 @@ public:
             isTrickle = isNeedTrickle(task, threadId);
         }
 
-        it(isTrickle) {
+        if(isTrickle) {
             trickle(); // 唤醒idle协程
         }
     }

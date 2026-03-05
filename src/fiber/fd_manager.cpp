@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 
 #include "fd_manager.hpp"
 #include "hook.hpp"

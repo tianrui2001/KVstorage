@@ -13,6 +13,9 @@ EventContext& FdContext::getContext(Event event){
         default:
             CondPanic(false, "getContext error");
     }
+
+    // 骗过编译器不报警告
+    throw std::invalid_argument("getContext invalid event"); 
 }
 
 void FdContext::resetContext(EventContext& ctx){
@@ -22,7 +25,7 @@ void FdContext::resetContext(EventContext& ctx){
 }
 
 void FdContext::triggerEvent(Event event){
-    if(event & events_ == NONE) {
+    if((event & events_) == NONE) {
         return; // 没有注册这个事件
     }
 
@@ -43,20 +46,20 @@ IOManager::IOManager(size_t threadCnt, bool useCaller, const std::string& name)
     : Scheduler(threadCnt, useCaller, name)
 {
     epfd_ = epoll_create(10);
-    CondPanic(epfd_ < 0, "epoll_create failed");
+    CondPanic(epfd_ > 0, "epoll_create failed");
 
     int ret = pipe(tickleFds_);
-    CondPanic(ret != 0, "pipe failed");
+    CondPanic(ret == 0, "pipe failed");
 
-    epoll_event event;
+    epoll_event event{};
     memset(&event, 0, sizeof(epoll_event));
     event.data.fd = tickleFds_[0];    // 监听管道的读端
     event.events = EPOLLIN | EPOLLET; // 边缘触发模式
     ret = fcntl(tickleFds_[0], F_SETFL, O_NONBLOCK);
-    CondPanic(ret != 0, "set fd nonblock error");
+    CondPanic(ret == 0, "set fd nonblock error");
 
     ret = epoll_ctl(epfd_, EPOLL_CTL_ADD, tickleFds_[0], &event);
-    CondPanic(ret != 0, "epoll_ctl failed");
+    CondPanic(ret == 0, "epoll_ctl failed");
 
     contextResize(32); // 初始化上下文数组大小为32
 
@@ -77,7 +80,7 @@ IOManager::~IOManager() {
     }
 }
 
-int IOManager::addEvent(int fd, Event event, funcCallBack cb = nullptr){
+int IOManager::addEvent(int fd, Event event, funcCallBack cb){
     FdContext* fdCtx = nullptr;
     RWMutex::ReadLock lock(mutex_);
 
@@ -97,7 +100,7 @@ int IOManager::addEvent(int fd, Event event, funcCallBack cb = nullptr){
     CondPanic(!(fdCtx->events_ & event), "event already registered"); // 已经注册的事件不能重复注册
     epoll_event epevent;
     epevent.data.ptr = fdCtx;
-    epevent.events = EPOLLET | fdCtx->events_ | event; // 边缘触发模式
+    epevent.events = EPOLLET | (int)fdCtx->events_ | (int)event; // 边缘触发模式
     int op = fdCtx->events_? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
 
     int ret = epoll_ctl(epfd_, op, fd, &epevent);
@@ -109,10 +112,11 @@ int IOManager::addEvent(int fd, Event event, funcCallBack cb = nullptr){
     pendingEventCnt_++;
     fdCtx->events_ = (Event)(fdCtx->events_ | event); // 更新已注册事件
     EventContext& ctx = fdCtx->getContext(event);
+    ctx.scheduler_ = Scheduler::getThis(); // 否则，保存当前调度
     if(cb) {
         ctx.cb_.swap(cb); // 如果有回调函数，保存到事件上下文
     } else {
-        ctx.scheduler_ = Scheduler::getThis(); // 否则，保存当前调度
+        ctx.fiber_ = Fiber::getThis(); // 否则，保存当前协程到事件上下文
         CondPanic(ctx.fiber_->getState() == Fiber::State::RUNNING, "fiber is running");
     }
 
@@ -138,7 +142,7 @@ bool IOManager::delEvent(int fd, Event event){
     int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
     epoll_event epevent;
     epevent.data.ptr = fdCtx;
-    epevent.events = EPOLLET | newEvents; // 边缘触发
+    epevent.events = EPOLLET | (int)newEvents; // 边缘触发
     int ret = epoll_ctl(epfd_, op, fd, &epevent);
     if (ret) {
         std::cout << "delevent: epoll ctl error" << std::endl;
@@ -170,7 +174,7 @@ bool IOManager::cancelEvent(int fd, Event event){
     int op = newEvents ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
     epoll_event epevent;
     epevent.data.ptr = fdCtx;
-    epevent.events = EPOLLET | newEvents; // 边缘触发
+    epevent.events = EPOLLET | (int)newEvents; // 边缘触发
     int ret = epoll_ctl(epfd_, op, fd, &epevent);
     if (ret) {
         std::cout << "delevent: epoll ctl error" << std::endl;
@@ -209,7 +213,8 @@ bool IOManager::cancelAll(int fd){
     if(fdCtx->events_ & READ) {
         fdCtx->triggerEvent(READ);
         pendingEventCnt_--;
-    } else if(fdCtx->events_ & WRITE) {
+    }
+    if(fdCtx->events_ & WRITE) {
         fdCtx->triggerEvent(WRITE);
         pendingEventCnt_--;
     }
