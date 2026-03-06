@@ -47,14 +47,19 @@ void myAssert(bool condition, std::string message = "Assertion failed!");
 
 template <typename... Args>
 std::string format(const char* format_str, Args... args) {
-    size_t size = std::snprintf(nullptr, 0, format_str, args...) + 1; // 计算格式化后的字符串长度 + '\0'
-    if (size <= 0){
-        throw std::runtime_error("Error during formatting.");
+    // C++17 编译期判断：如果没有额外参数，直接返回原始字符串
+    if constexpr (sizeof...(args) == 0) {
+        return std::string(format_str);
+    } else {
+        int size = std::snprintf(nullptr, 0, format_str, args...) + 1; // 计算格式化后的字符串长度 + '\0'
+        if (size <= 0){
+            throw std::runtime_error("Error during formatting.");
+        }
+        
+        std::vector<char> buffer(size);
+        std::snprintf(buffer.data(), size, format_str, args...); // 格式化字符串
+        return std::string(buffer.data(), buffer.data() + size - 1); // remove '\0'
     }
-    
-    std::vector<char> buffer(size);
-    std::snprintf(buffer.data(), size, format_str, args...); // 格式化字符串
-    return std::string(buffer.data(), buffer.data() + size - 1); // remove '\0'
 }
 
 // -----------时间相关：------------

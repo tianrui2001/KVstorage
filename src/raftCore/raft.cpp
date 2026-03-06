@@ -194,7 +194,7 @@ void Raft::doHeartBeat(){
     }
 
     DPrintf("[func-Raft::doHeartBeat()-Leader: {%d}] Leader的心跳定时器触发了且拿到mutex，开始发送AE\n", raftId_);
-    auto appendNum = std::make_shared<int>(0); // 正确返回的节点的数量
+    auto appendNum = std::make_shared<int>(1); // 正确返回的节点的数量
     for(int i=0; i<peers_.size(); i++) {
         if(i == raftId_) {
             continue; // 不给自己发心跳
@@ -232,7 +232,7 @@ void Raft::doHeartBeat(){
 
         // 填充日志条目 (Entries)
         // 这里的逻辑是：把 logs_ 中，从 preLogIndex 之后的所有日志都打包放进去。
-        if(preLogIndex > lastSnapshotIncludeIndex_) {
+        if(preLogIndex != lastSnapshotIncludeIndex_) {
             // 情况 1：正常情况。通过 getSlicesIndexFromLogIndex 算出 logs_ 数组的下标。
             for(int j = getSlicesIndexFromLogIndex(preLogIndex) + 1; j < logs_.size(); j++) {
                 raftRpcProctoc::LogEntry* logEntry = AppendEntriesArgs->add_entries();
@@ -350,8 +350,8 @@ bool Raft::sendAppendEntries(int peerId, std::shared_ptr<raftRpcProctoc::AppendE
                     "from{%d} to{%d}",
                     commitIndex_, args->prevlogindex() + args->entries_size());
                 
-                // 此时，就可以安全地把 commitIndex 推进到这次发送的日志末尾。
-                commitIndex_ = args->prevlogindex() + args->entries_size();
+                // 此时，就可以安全地把 commitIndex 推进到这次发送的日志末尾。 要取max
+                commitIndex_ = std::max(commitIndex_, args->prevlogindex() + args->entries_size());
             }
 
             myAssert(commitIndex_ <= lastLogIndex,
@@ -372,7 +372,7 @@ bool Raft::sendRequestVote(int peerId, std::shared_ptr<raftRpcProctoc::RequestVo
     DPrintf("[func-sendRequestVote rf{%d}] 向server{%d} 发送 RequestVote 开始", raftId_, peerId);
     bool isOk = peers_[peerId]->RequestVote(args.get(), reply.get());
     DPrintf("[func-sendRequestVote rf{%d}] 向server{%d} 发送 RequestVote 完成，耗时:{%d} ms", 
-          raftId_, peerId, now() - start);
+          raftId_, peerId, std::chrono::duration_cast<std::chrono::milliseconds>(now() - start).count());
 
     if(!isOk) {
         return isOk; // RPC 调用失败了，可能是网络问题，直接返回
@@ -742,6 +742,11 @@ void Raft::applierTicker() {
         {
             std::unique_lock<std::mutex> lock(mutex_);
             applyMsgs = getApplyLogs(); // 获取所有需要应用的日志条目
+
+            if (status_ == Leader) {
+                DPrintf("[Raft::applierTicker() - raft{%d}]  m_lastApplied{%d}   m_commitIndex{%d}", 
+                    raftId_, lastApplied_, commitIndex_);
+            }
         }
 
         if(applyMsgs.empty()) {
@@ -805,6 +810,7 @@ void Raft::getPrevLogInfo(int raftId, int *preIndex, int *preTerm) {
     if(nextIndex_[raftId] == lastSnapshotIncludeIndex_ + 1) {
         *preIndex = lastSnapshotIncludeIndex_;
         *preTerm = lastSnapshotIncludeTerm_;
+        return;
     }
 
     *preIndex = nextIndex_[raftId] - 1;

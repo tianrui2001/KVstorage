@@ -119,7 +119,7 @@ private:
     std::list<SchedulerTask> tasks_; // 任务队列
     std::vector<Thread::ThreadPtr> threadPool_; // 线程池
     std::vector<int> threadIds_; // 线程 ID 列表
-    bool isStopped_; // 是否停止调度器
+    bool isStopped_ = false; // 是否停止调度器
 
     size_t threadCnt_ = 0; // 线程数量
     std::atomic<size_t> activeThreadCnt_ = {0}; // 活跃线程数量

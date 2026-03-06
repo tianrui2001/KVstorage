@@ -53,6 +53,7 @@ KvServer::KvServer(int raftId, int maxRaftStateSize, std::string nodeInfoFileNam
 
         RaftRPCUtil* rpcUtil = new RaftRPCUtil(peerAddrs[i].first, peerAddrs[i].second);
         peers.push_back(std::shared_ptr<RaftRPCUtil>(rpcUtil));
+        std::cout << "node" << raftId_ << " 连接node" << i << "success!" << std::endl;
     }
 
     // 等待所有的节点链接成功
@@ -69,7 +70,7 @@ KvServer::KvServer(int raftId, int maxRaftStateSize, std::string nodeInfoFileNam
     }
 
     std::thread t1(&KvServer::readApplyCommandLoop, this);  // 启动一个后台线程，不断地从 applyChan_ 中读取已经提交的日志，并应用到状态机上
-    t1.detach();
+    t1.join();
 }
 
 void KvServer::dprintfKVDB() {
@@ -251,7 +252,7 @@ void KvServer::putAppendImpl(const raftKVRpcProctoc::PutAppendArgs* args,
     }
 
     Op raftCommitOp;
-    if(chForRaftIndex->timeOutPop(ConsensusTimeout, &raftCommitOp)) {
+    if(!chForRaftIndex->timeOutPop(ConsensusTimeout, &raftCommitOp)) {
         DPrintf(
             "[func -KvServer::PutAppend -kvserver{%d}]TIMEOUT PUTAPPEND !!!! Server %d , get Command <-- Index:%d , "
             "ClientId %s, RequestId %s, Opreation %s Key :%s, Value :%s",

@@ -172,6 +172,11 @@ void Scheduler::start(){
 
     Mutex::Lock lock(mutex_);
     if(isStopped_ || !threadPool_.empty()) {
+        if(isStopped_) {
+            std::cout << LOG_HEAD << "scheduler already stopped" << std::endl;
+        } else {
+            std::cout << LOG_HEAD << "thread pool is not empty" << std::endl;
+        }
         return; // 如果已经停止了，就不再启动
     }
 

@@ -3,6 +3,9 @@
 #include <mutex>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/unordered_map.hpp>    // 序列化unordered_map需要这个头文件
+#include <boost/serialization/string.hpp>         // 序列化string需要这个头文件
+#include <boost/serialization/vector.hpp>         // 序列化vector需要这个头文件
 
 #include "raft.h"
 #include "kvServerRpc.pb.h"

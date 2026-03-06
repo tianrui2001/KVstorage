@@ -4,7 +4,7 @@
 
 #include "Persister.h"
 
-explicit Persister::Persister(int raftId)
+Persister::Persister(int raftId)
 : raftStateFileName_("raftstate" + std::to_string(raftId) + ".txt"),
     raftSnapshotFileName_("raftsnap" + std::to_string(raftId) + ".txt"),
     raftStateSize_(0)
