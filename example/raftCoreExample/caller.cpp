@@ -9,10 +9,11 @@ int main() {
     int count = 500;
     int tmp = count;
     while(tmp--) {
-        clerk.Put("x", std::to_string(tmp));
+        std::string key = "x" + std::to_string(tmp);
+        clerk.Put(key, std::to_string(tmp));
 
-        std::string getval = clerk.Get("x");
-        std::cout << "Get x: " << getval << std::endl;
+        std::string getval = clerk.Get(key);
+        std::cout << "Get " << key << ": " << getval << std::endl;
     }
 
     return 0;
